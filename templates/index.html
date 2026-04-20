@@ -375,7 +375,7 @@ async function cargarDashboard() {
     document.getElementById("welcome-msg").textContent = alertas.length ? `Tienes ${alertas.length} ID${alertas.length>1?"s":""} vencido${alertas.length>1?"s":""} que requieren atención.` : "Todo al día. ¡Sin alertas pendientes!";
     const cont = document.getElementById("dash-alertas");
     cont.innerHTML = !alertas.length ? `<div class="empty">✅ Sin alertas pendientes</div>` :
-      alertas.slice(0,5).map(r=>`<div class="alerta-row"><span class="al-tipo">${r.tipo_compra||"—"}</span><span class="al-id">${r.id_compra||"—"}</span><span class="al-desc">${r.desc_id||"—"}</span><span class="al-dias">${r.dias_sin_oc}d</span><button class="btn-action" onclick="abrirModal(${r.id_registro})">OC</button></div>`).join("");
+      alertas.slice(0,5).map(r=>`<div class="alerta-row"><span class="al-tipo">${r.tipo_compra||"—"}</span><span class="al-id">${r.id_compra||"—"}</span><span class="al-desc">${r.desc_id||"—"}</span><span class="al-dias">${r.dias_sin_oc}d</span><button class="btn-action" onclick="abrirModal(${r.id_registro})">✏️</button></div>`).join("");
   } catch(e) {
     document.getElementById("dash-alertas").innerHTML=`<div class="empty">❌ Error al cargar</div>`;
   }
@@ -395,7 +395,7 @@ async function cargarSeguimiento() {
       const bmap={"SIN OC":"badge-sinoc","OC EN PROCESO":"badge-proceso","OC CONFIRMADA":"badge-confirmada","OC RECIBIDA":"badge-confirmada"};
       return `<tr id="main-row-${r.id_registro}">
         <td class="mono" style="color:var(--text3);">${i+1}</td>
-        <td><span class="tipo-tag">${r.tipo_compra||"—"}</span></td>
+        <td><span class="tipo-tag">${r.tipo_compra||"—"}</span> <button class="btn-mat" onclick="toggleMateriales(${r.id_registro},'${r.id_compra}')">▼</button></td>
         <td class="mono">${r.id_compra||"—"}</td>
         <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.desc_id||""}">${r.desc_id||"—"}</td>
         <td style="font-size:11px;color:var(--text2);">${r.area_solicitante||"—"}</td>
@@ -406,7 +406,6 @@ async function cargarSeguimiento() {
         <td class="mono" style="font-size:11px;">${total}</td>
         <td style="white-space:nowrap;display:flex;gap:4px;">
           <button class="btn-action" onclick="abrirModal(${r.id_registro})">OC</button>
-          <button class="btn-mat" onclick="toggleMateriales(${r.id_registro},'${r.id_compra}')">▼ Mat</button>
           <button style="font-size:10px;padding:4px 8px;border-radius:6px;background:var(--red-light);color:var(--red);border:none;cursor:pointer;" onclick="eliminar(${r.id_registro})">🗑</button>
         </td>
       </tr>
