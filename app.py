@@ -96,6 +96,12 @@ def get_dashboard():
         "confirmadas": confirmadas,
         "alertas":     alertas
     })
+    @app.route("/api/materiales", methods=["POST"])
+def crear_material():
+    body = request.json
+    body["created_at"] = datetime.now().isoformat()
+    res = supabase.table("material").insert(body).execute()
+    return jsonify(res.data[0] if res.data else {}), 201
 @app.route("/api/materiales/<id_compra>", methods=["GET"])
 def get_materiales(id_compra):
     res = supabase.table("material").select("*").eq("id_compra", id_compra).execute()
