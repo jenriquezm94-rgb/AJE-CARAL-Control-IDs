@@ -96,7 +96,8 @@ def get_dashboard():
         "confirmadas": confirmadas,
         "alertas":     alertas
     })
-    @app.route("/api/materiales", methods=["POST"])
+
+@app.route("/api/materiales", methods=["POST"])
 def crear_material():
     body = request.json
     body["created_at"] = datetime.now().isoformat()
