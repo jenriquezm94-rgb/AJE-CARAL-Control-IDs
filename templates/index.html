@@ -125,6 +125,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--caral);background:#ff
 .mat-tabla{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;}
 .mat-tabla th{padding:6px 10px;text-align:left;color:var(--caral);font-weight:600;background:var(--caral-light);}
 .mat-tabla td{padding:6px 10px;border-bottom:1px solid var(--border);}
+.autocomplete-lista{position:absolute;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:999;max-height:200px;overflow-y:auto;min-width:300px;top:100%;left:0;}
+.autocomplete-item{padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;}
+.autocomplete-item:hover{background:var(--caral-light);}
 .loading{text-align:center;padding:40px;color:var(--text2);font-size:13px;}
 .empty{text-align:center;padding:48px;color:var(--text3);font-size:13px;}
 @media(max-width:900px){
@@ -204,7 +207,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--caral);background:#ff
     <div class="grid2">
       <div class="col">
         <div class="card">
-          <div class="card-head"><span class="card-title">🚨 IDs que requieren atención</span><button class="btn-xs" onclick="navTo('alertas',null)">Ver todos</button></div>
+          <div class="card-head"><span class="card-title">IDs que requieren atención</span><button class="btn-xs" onclick="navTo('alertas',null)">Ver todos</button></div>
           <div id="dash-alertas"><div class="loading">Cargando...</div></div>
         </div>
       </div>
@@ -372,7 +375,7 @@ async function cargarDashboard() {
     const alertas = data.alertas||[];
     const badge = document.getElementById("sb-badge");
     if(alertas.length){badge.style.display="inline";badge.textContent=alertas.length;}
-    document.getElementById("welcome-msg").textContent = alertas.length ? `Tienes ${alertas.length} ID${alertas.length>1?"s":""} vencido${alertas.length>1?"s":""} que requieren atención.` : "Todo al día. ¡Sin alertas pendientes!";
+    document.getElementById("welcome-msg").textContent = alertas.length ? `Tienes ${alertas.length} ID${alertas.length>1?"s":""} vencido${alertas.length>1?"s":""} que requieren atención.` : "Todo al día. Sin alertas pendientes.";
     const cont = document.getElementById("dash-alertas");
     cont.innerHTML = !alertas.length ? `<div class="empty">✅ Sin alertas pendientes</div>` :
       alertas.slice(0,5).map(r=>`<div class="alerta-row"><span class="al-tipo">${r.tipo_compra||"—"}</span><span class="al-id">${r.id_compra||"—"}</span><span class="al-desc">${r.desc_id||"—"}</span><span class="al-dias">${r.dias_sin_oc}d</span><button class="btn-action" onclick="abrirModal(${r.id_registro})">✏️</button></div>`).join("");
@@ -382,7 +385,11 @@ async function cargarDashboard() {
 }
 
 async function cargarSeguimiento() {
-  const params = new URLSearchParams({buscar:document.getElementById("s-buscar").value,compania:document.getElementById("s-compania").value,estado:document.getElementById("s-estado").value});
+  const params = new URLSearchParams({
+    buscar: document.getElementById("s-buscar").value,
+    compania: document.getElementById("s-compania").value,
+    estado: document.getElementById("s-estado").value
+  });
   const tbody = document.getElementById("tabla-body");
   tbody.innerHTML=`<tr><td colspan="11" class="loading">Cargando...</td></tr>`;
   try {
@@ -405,123 +412,118 @@ async function cargarSeguimiento() {
         <td><span class="badge ${bmap[r.estado_oc]||"badge-sinoc"}">${r.estado_oc||"SIN OC"}</span></td>
         <td class="mono" style="font-size:11px;">${total}</td>
         <td style="white-space:nowrap;display:flex;gap:4px;">
-          <button class="btn-action" onclick="abrirModal(${r.id_registro})">OC</button>
+          <button class="btn-action" onclick="abrirModal(${r.id_registro})">✏️</button>
           <button style="font-size:10px;padding:4px 8px;border-radius:6px;background:var(--red-light);color:var(--red);border:none;cursor:pointer;" onclick="eliminar(${r.id_registro})">🗑</button>
         </td>
       </tr>
       <tr id="mat-row-${r.id_registro}" style="display:none;">
         <td colspan="11" style="padding:0;background:#f9fafb;">
-          <div id="mat-${r.id_registro}" style="padding:12px 24px;">
-</div>
-<div id="mat-form-${r.id_registro}" style="display:none;padding:12px 24px;background:#f0fdf4;border-top:1px solid #bbf7d0;">
-  <div style="font-size:11px;font-weight:600;color:var(--caral);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">+ Agregar material</div>
-  <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:10px;margin-bottom:10px;">
-    <div><label style="font-size:10px;color:var(--text2);">CÓD. MATERIAL</label><input type="text" id="mc-cod-${r.id_registro}" oninput="buscarKardex(this.value,${r.id_registro})" placeholder="Ej: 56868" style="margin-top:4px;"></div>
-    <div><label style="font-size:10px;color:var(--text2);">DESCRIPCIÓN</label><input type="text" id="mc-desc-${r.id_registro}" placeholder="Descripción del material" style="margin-top:4px;"></div>
-    <div><label style="font-size:10px;color:var(--text2);">CANTIDAD</label><input type="number" id="mc-cant-${r.id_registro}" placeholder="0" style="margin-top:4px;"></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
-    <div><label style="font-size:10px;color:var(--text2);">PRECIO UNIT.</label><input type="number" id="mc-precio-${r.id_registro}" placeholder="0.00" step="0.01" style="margin-top:4px;"></div>
-    <div><label style="font-size:10px;color:var(--text2);">FAMILIA</label><input type="text" id="mc-familia-${r.id_registro}" placeholder="Familia" style="margin-top:4px;"></div>
-    <div><label style="font-size:10px;color:var(--text2);">ALMACÉN</label><input type="text" id="mc-almacen-${r.id_registro}" placeholder="Almacén" style="margin-top:4px;"></div>
-    <div style="display:flex;align-items:flex-end;gap:6px;">
-      <button class="btn btn-primary btn-sm" onclick="guardarMaterial(${r.id_registro},'${r.id_compra}')">Guardar</button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mat-form-${r.id_registro}').style.display='none'">Cancelar</button>
-    </div>
-  </div>
-</div>
+          <div id="mat-${r.id_registro}" style="padding:12px 24px;"></div>
+          <div id="mat-form-${r.id_registro}" style="display:none;padding:12px 24px;background:#f0fdf4;border-top:1px solid #bbf7d0;">
+            <div style="font-size:11px;font-weight:600;color:var(--caral);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">+ Agregar material</div>
+            <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:10px;margin-bottom:10px;">
+              <div style="position:relative;">
+                <label style="font-size:10px;color:var(--text2);">CÓD. MATERIAL</label>
+                <input type="text" id="mc-cod-${r.id_registro}" placeholder="Ej: 56868" style="margin-top:4px;" oninput="buscarKardex(this.value,${r.id_registro})">
+                <div id="kardex-lista-${r.id_registro}" class="autocomplete-lista" style="display:none;"></div>
+              </div>
+              <div><label style="font-size:10px;color:var(--text2);">DESCRIPCIÓN</label><input type="text" id="mc-desc-${r.id_registro}" placeholder="Descripción del material" style="margin-top:4px;"></div>
+              <div><label style="font-size:10px;color:var(--text2);">CANTIDAD</label><input type="number" id="mc-cant-${r.id_registro}" placeholder="0" style="margin-top:4px;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div><label style="font-size:10px;color:var(--text2);">PRECIO UNIT.</label><input type="number" id="mc-precio-${r.id_registro}" placeholder="0.00" step="0.01" style="margin-top:4px;"></div>
+              <div><label style="font-size:10px;color:var(--text2);">FAMILIA</label><input type="text" id="mc-familia-${r.id_registro}" placeholder="Familia" style="margin-top:4px;"></div>
+              <div><label style="font-size:10px;color:var(--text2);">ALMACÉN</label><input type="text" id="mc-almacen-${r.id_registro}" placeholder="Almacén" style="margin-top:4px;"></div>
+              <div style="display:flex;align-items:flex-end;gap:6px;">
+                <button class="btn btn-primary btn-sm" onclick="guardarMaterial(${r.id_registro},'${r.id_compra}')">Guardar</button>
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mat-form-${r.id_registro}').style.display='none'">Cancelar</button>
+              </div>
+            </div>
+          </div>
         </td>
       </tr>`;
     }).join("");
   } catch(e){tbody.innerHTML=`<tr><td colspan="11" class="empty">❌ Error</td></tr>`;}
 }
-  async function buscarKardex(val, id_registro) {
-  if(val.length < 2) return;
+
+async function buscarKardex(val, id_registro) {
+  const lista = document.getElementById("kardex-lista-"+id_registro);
+  if(val.length < 2){lista.style.display="none";return;}
   try {
-    const data = await (await fetch(`/api/kardex/buscar?cod=${val}`)).json();
-    let lista = document.getElementById("kardex-lista-"+id_registro);
-    if(!lista){
-      lista = document.createElement("div");
-      lista.id = "kardex-lista-"+id_registro;
-      lista.style.cssText = "position:absolute;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:999;max-height:200px;overflow-y:auto;min-width:300px;";
-      document.getElementById("mc-cod-"+id_registro).parentNode.style.position="relative";
-      document.getElementById("mc-cod-"+id_registro).parentNode.appendChild(lista);
-    }
-    if(!data.length){lista.innerHTML="";return;}
+    const data = await (await fetch("/api/kardex/buscar?cod="+encodeURIComponent(val))).json();
+    if(!data.length){lista.style.display="none";return;}
+    lista.style.display="block";
     lista.innerHTML = data.map(m=>`
-      <div onclick="seleccionarKardex('${m.Codigo}','${(m.Descripcion||"").replace(/'/g,"\\'")}','${m.UniMedida||""}',${id_registro})"
-        style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;">
-        <span style="font-weight:600;color:#5a8a1f;">${m.Codigo}</span>
-        <span style="color:#6b7280;margin-left:8px;">${m.Descripcion||""}</span>
-        <span style="color:#9ca3af;margin-left:8px;font-size:10px;">${m.UniMedida||""}</span>
+      <div class="autocomplete-item" onclick="seleccionarKardex('${m.Codigo}',${JSON.stringify(m.Descripcion||"")},${id_registro})">
+        <span style="font-weight:600;color:var(--caral);">${m.Codigo}</span>
+        <span style="color:var(--text2);margin-left:8px;">${m.Descripcion||""}</span>
+        <span style="color:var(--text3);margin-left:8px;font-size:10px;">${m.UniMedida||""}</span>
       </div>`).join("");
-  } catch(e){}
+  } catch(e){lista.style.display="none";}
 }
 
-function seleccionarKardex(cod, desc, um, id_registro) {
+function seleccionarKardex(cod, desc, id_registro) {
   document.getElementById("mc-cod-"+id_registro).value = cod;
   document.getElementById("mc-desc-"+id_registro).value = desc;
-  const lista = document.getElementById("kardex-lista-"+id_registro);
-  if(lista) lista.innerHTML = "";
+  document.getElementById("kardex-lista-"+id_registro).style.display="none";
 }
+
 async function guardarMaterial(id_registro, id_compra) {
   const body = {
-    id_compra:    id_compra,
+    id_compra: id_compra,
     cod_material: document.getElementById("mc-cod-"+id_registro).value.trim(),
-    desc_material:document.getElementById("mc-desc-"+id_registro).value.trim(),
-    cantidad:     document.getElementById("mc-cant-"+id_registro).value||null,
-    precio:       parseFloat(document.getElementById("mc-precio-"+id_registro).value)||null,
-    familia:      document.getElementById("mc-familia-"+id_registro).value.trim(),
-    Almacen:      document.getElementById("mc-almacen-"+id_registro).value.trim(),
+    desc_material: document.getElementById("mc-desc-"+id_registro).value.trim(),
+    cantidad: document.getElementById("mc-cant-"+id_registro).value||null,
+    precio: parseFloat(document.getElementById("mc-precio-"+id_registro).value)||null,
+    familia: document.getElementById("mc-familia-"+id_registro).value.trim(),
+    Almacen: document.getElementById("mc-almacen-"+id_registro).value.trim(),
   };
   if(!body.cod_material||!body.desc_material){alert("⚠️ Completa Código y Descripción");return;}
   try {
     await fetch("/api/materiales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     document.getElementById("mat-form-"+id_registro).style.display="none";
-    toggleMateriales(id_registro, id_compra);
+    const row = document.getElementById("mat-row-"+id_registro);
+    row.style.display="none";
     toggleMateriales(id_registro, id_compra);
     alert("✅ Material guardado");
   } catch(e){alert("❌ Error al guardar material");}
 }
+
 async function toggleMateriales(id_registro, id_compra) {
   const row = document.getElementById("mat-row-"+id_registro);
   const cont = document.getElementById("mat-"+id_registro);
-  if(row.style.display !== "none") {
-    row.style.display = "none";
-    return;
-  }
-  row.style.display = "table-row";
-  cont.innerHTML = `<div style="font-size:12px;color:#6b7280;padding:8px;">Cargando materiales...</div>`;
+  if(row.style.display !== "none"){row.style.display="none";return;}
+  row.style.display="table-row";
+  cont.innerHTML=`<div style="font-size:12px;color:#6b7280;padding:8px;">Cargando materiales...</div>`;
   try {
-    const data = await (await fetch(`/api/materiales/${id_compra}`)).json();
+    const data = await (await fetch("/api/materiales/"+id_compra)).json();
     if(!data.length){
-      cont.innerHTML=`<div style="font-size:12px;color:#9ca3af;padding:8px;"><button class="btn-mat" style="margin-bottom:8px;" onclick="document.getElementById('mat-form-${id_registro}').style.display='block'">+ Agregar material</button>Sin materiales registrados para este ID</div>`;
+      cont.innerHTML=`<div style="padding:8px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:var(--text3);">Sin materiales registrados</span>
+        <button class="btn-mat" onclick="document.getElementById('mat-form-${id_registro}').style.display='block'">+ Agregar material</button>
+      </div>`;
       return;
     }
-    cont.innerHTML = `
+    cont.innerHTML=`
+      <div style="padding:8px 0 4px;display:flex;justify-content:flex-end;">
+        <button class="btn-mat" onclick="document.getElementById('mat-form-${id_registro}').style.display='block'">+ Agregar material</button>
+      </div>
       <table class="mat-tabla">
-        <thead>
-          <tr>
-            <th>Cód. Material</th><th>Descripción</th><th>Cantidad</th>
-            <th>Precio</th><th>Total</th><th>Familia</th><th>Almacén</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.map(m=>`
-          <tr>
-            <td class="mono">${m.cod_material||"—"}</td>
-            <td>${m.desc_material||"—"}</td>
-            <td>${m.cantidad||"—"}</td>
-            <td>${m.precio?`S/ ${parseFloat(m.precio).toLocaleString("es-PE",{minimumFractionDigits:2})}`:"—"}</td>
-            <td style="font-weight:600;color:var(--caral);">${m.total?`S/ ${parseFloat(m.total).toLocaleString("es-PE",{minimumFractionDigits:2})}`:"—"}</td>
-            <td>${m.familia||"—"}</td>
-            <td>${m.Almacen||"—"}</td>
-          </tr>`).join("")}
-        </tbody>
+        <thead><tr>
+          <th>Cód. Material</th><th>Descripción</th><th>Cantidad</th>
+          <th>Precio</th><th>Total</th><th>Familia</th><th>Almacén</th>
+        </tr></thead>
+        <tbody>${data.map(m=>`<tr>
+          <td class="mono">${m.cod_material||"—"}</td>
+          <td>${m.desc_material||"—"}</td>
+          <td>${m.cantidad||"—"}</td>
+          <td>${m.precio?"S/ "+parseFloat(m.precio).toLocaleString("es-PE",{minimumFractionDigits:2}):"—"}</td>
+          <td style="font-weight:600;color:var(--caral);">${m.total?"S/ "+parseFloat(m.total).toLocaleString("es-PE",{minimumFractionDigits:2}):"—"}</td>
+          <td>${m.familia||"—"}</td>
+          <td>${m.Almacen||"—"}</td>
+        </tr>`).join("")}</tbody>
       </table>`;
-  } catch(e){
-    cont.innerHTML=`<div style="font-size:12px;color:#dc2626;padding:8px;">❌ Error al cargar materiales</div>`;
-  }
+  } catch(e){cont.innerHTML=`<div style="font-size:12px;color:#dc2626;padding:8px;">❌ Error al cargar materiales</div>`;}
 }
 
 async function cargarAlertas() {
@@ -531,7 +533,7 @@ async function cargarAlertas() {
     const data=await (await fetch("/api/dashboard")).json();
     const alertas=data.alertas||[];
     cont.innerHTML=!alertas.length?`<div class="empty">✅ No hay IDs con alertas</div>`:
-      alertas.map(r=>`<div class="alerta-row"><span class="al-tipo">${r.tipo_compra||"—"}</span><span class="al-id">${r.id_compra||"—"}</span><span class="al-desc">${r.desc_id||"—"}</span><span style="font-size:11px;color:var(--text2);">${r.area_solicitante||""}</span><span class="al-dias">${r.dias_sin_oc}d sin OC</span><button class="btn-action" onclick="abrirModal(${r.id_registro})">OC</button></div>`).join("");
+      alertas.map(r=>`<div class="alerta-row"><span class="al-tipo">${r.tipo_compra||"—"}</span><span class="al-id">${r.id_compra||"—"}</span><span class="al-desc">${r.desc_id||"—"}</span><span style="font-size:11px;color:var(--text2);">${r.area_solicitante||""}</span><span class="al-dias">${r.dias_sin_oc}d sin OC</span><button class="btn-action" onclick="abrirModal(${r.id_registro})">✏️ OC</button></div>`).join("");
   } catch(e){cont.innerHTML=`<div class="empty">❌ Error</div>`;}
 }
 
@@ -543,9 +545,8 @@ async function guardarRegistro(){
   const body={tipo_compra:tipo,id_compra:id_c,fecha_emision:fecha,moneda:document.getElementById("f-moneda").value,area_solicitante:document.getElementById("f-area_solicitante").value.trim(),solicitante:document.getElementById("f-solicitante").value.trim(),departamento:document.getElementById("f-departamento").value.trim(),desc_id:document.getElementById("f-desc_id").value.trim(),cod_proveedor:document.getElementById("f-cod_proveedor").value.trim(),desc_proveedor:document.getElementById("f-desc_proveedor").value.trim(),total:parseFloat(document.getElementById("f-total").value)||null,estado_oc:document.getElementById("f-estado_oc").value,comentarios:document.getElementById("f-comentarios").value.trim()};
   try{
     const data=await (await fetch("/api/registros",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();
-    alert(`✅ ID registrado: ${data.id_compra}`);
-    limpiarForm();
-    cargarDashboard();
+    alert("✅ ID registrado: "+data.id_compra);
+    limpiarForm();cargarDashboard();
   }catch(e){alert("❌ Error al guardar");}
 }
 
@@ -558,7 +559,7 @@ function limpiarForm(){
 function abrirModal(id){
   const r=registros.find(x=>x.id_registro===id)||{id_registro:id};
   document.getElementById("modal-id").value=id;
-  document.getElementById("modal-titulo").textContent=`Actualizar OC — ${r.tipo_compra||""} ${r.id_compra||"#"+id}`;
+  document.getElementById("modal-titulo").textContent="Actualizar OC — "+(r.tipo_compra||"")+" "+(r.id_compra||"#"+id);
   document.getElementById("modal-estado").value=r.estado_oc||"SIN OC";
   document.getElementById("modal-nro_oc").value=r.nro_oc||"";
   document.getElementById("modal-fecha_oc").value=r.fecha_oc?String(r.fecha_oc).slice(0,10):"";
@@ -575,25 +576,24 @@ async function guardarOC(){
   const id=document.getElementById("modal-id").value;
   const body={estado_oc:document.getElementById("modal-estado").value,nro_oc:document.getElementById("modal-nro_oc").value.trim(),fecha_oc:document.getElementById("modal-fecha_oc").value||null,fecha_recepcion:document.getElementById("modal-fecha_recepcion").value||null,cant_entregada:document.getElementById("modal-cant_entregada").value||null,oc_completa:document.getElementById("modal-oc_completa").value||null,comentarios:document.getElementById("modal-comentarios").value.trim()};
   try{
-    await fetch(`/api/registros/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    cerrarModal();
-    cargarSeguimiento();
-    cargarDashboard();
+    await fetch("/api/registros/"+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    cerrarModal();cargarSeguimiento();cargarDashboard();
     alert("✅ OC guardada correctamente");
   }catch(e){alert("❌ Error al guardar OC");}
 }
 
 async function eliminar(id){
   if(!confirm("¿Eliminar este registro?")) return;
-  try{
-    await fetch(`/api/registros/${id}`,{method:"DELETE"});
-    cargarSeguimiento();
-    cargarDashboard();
-  }catch(e){alert("❌ Error");}
+  try{await fetch("/api/registros/"+id,{method:"DELETE"});cargarSeguimiento();cargarDashboard();}
+  catch(e){alert("❌ Error");}
 }
 
 document.getElementById("modal-bg").addEventListener("click",function(e){if(e.target===this)cerrarModal();});
+document.addEventListener("click",function(e){
+  document.querySelectorAll(".autocomplete-lista").forEach(l=>{
+    if(!l.contains(e.target)) l.style.display="none";
+  });
+});
 </script>
 </body>
 </html>
-
