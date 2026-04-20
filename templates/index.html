@@ -416,7 +416,7 @@ async function cargarSeguimiento() {
 <div id="mat-form-${r.id_registro}" style="display:none;padding:12px 24px;background:#f0fdf4;border-top:1px solid #bbf7d0;">
   <div style="font-size:11px;font-weight:600;color:var(--caral);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">+ Agregar material</div>
   <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:10px;margin-bottom:10px;">
-    <div><label style="font-size:10px;color:var(--text2);">CÓD. MATERIAL</label><input type="text" id="mc-cod-${r.id_registro}" placeholder="Ej: 56868" style="margin-top:4px;"></div>
+    <div><label style="font-size:10px;color:var(--text2);">CÓD. MATERIAL</label><input type="text" id="mc-cod-${r.id_registro}" oninput="buscarKardex(this.value,${r.id_registro})" placeholder="Ej: 56868" style="margin-top:4px;"></div>
     <div><label style="font-size:10px;color:var(--text2);">DESCRIPCIÓN</label><input type="text" id="mc-desc-${r.id_registro}" placeholder="Descripción del material" style="margin-top:4px;"></div>
     <div><label style="font-size:10px;color:var(--text2);">CANTIDAD</label><input type="number" id="mc-cant-${r.id_registro}" placeholder="0" style="margin-top:4px;"></div>
   </div>
@@ -434,6 +434,35 @@ async function cargarSeguimiento() {
       </tr>`;
     }).join("");
   } catch(e){tbody.innerHTML=`<tr><td colspan="11" class="empty">❌ Error</td></tr>`;}
+}
+  async function buscarKardex(val, id_registro) {
+  if(val.length < 2) return;
+  try {
+    const data = await (await fetch(`/api/kardex/buscar?cod=${val}`)).json();
+    let lista = document.getElementById("kardex-lista-"+id_registro);
+    if(!lista){
+      lista = document.createElement("div");
+      lista.id = "kardex-lista-"+id_registro;
+      lista.style.cssText = "position:absolute;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:999;max-height:200px;overflow-y:auto;min-width:300px;";
+      document.getElementById("mc-cod-"+id_registro).parentNode.style.position="relative";
+      document.getElementById("mc-cod-"+id_registro).parentNode.appendChild(lista);
+    }
+    if(!data.length){lista.innerHTML="";return;}
+    lista.innerHTML = data.map(m=>`
+      <div onclick="seleccionarKardex('${m.Codigo}','${(m.Descripcion||"").replace(/'/g,"\\'")}','${m.UniMedida||""}',${id_registro})"
+        style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;">
+        <span style="font-weight:600;color:#5a8a1f;">${m.Codigo}</span>
+        <span style="color:#6b7280;margin-left:8px;">${m.Descripcion||""}</span>
+        <span style="color:#9ca3af;margin-left:8px;font-size:10px;">${m.UniMedida||""}</span>
+      </div>`).join("");
+  } catch(e){}
+}
+
+function seleccionarKardex(cod, desc, um, id_registro) {
+  document.getElementById("mc-cod-"+id_registro).value = cod;
+  document.getElementById("mc-desc-"+id_registro).value = desc;
+  const lista = document.getElementById("kardex-lista-"+id_registro);
+  if(lista) lista.innerHTML = "";
 }
 async function guardarMaterial(id_registro, id_compra) {
   const body = {
