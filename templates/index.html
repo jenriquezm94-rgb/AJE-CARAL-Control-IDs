@@ -411,13 +411,49 @@ async function cargarSeguimiento() {
       </tr>
       <tr id="mat-row-${r.id_registro}" style="display:none;">
         <td colspan="11" style="padding:0;background:#f9fafb;">
-          <div id="mat-${r.id_registro}" style="padding:12px 24px;"></div>
+          <div id="mat-${r.id_registro}" style="padding:12px 24px;">
+</div>
+<div id="mat-form-${r.id_registro}" style="display:none;padding:12px 24px;background:#f0fdf4;border-top:1px solid #bbf7d0;">
+  <div style="font-size:11px;font-weight:600;color:var(--caral);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">+ Agregar material</div>
+  <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:10px;margin-bottom:10px;">
+    <div><label style="font-size:10px;color:var(--text2);">CÓD. MATERIAL</label><input type="text" id="mc-cod-${r.id_registro}" placeholder="Ej: 56868" style="margin-top:4px;"></div>
+    <div><label style="font-size:10px;color:var(--text2);">DESCRIPCIÓN</label><input type="text" id="mc-desc-${r.id_registro}" placeholder="Descripción del material" style="margin-top:4px;"></div>
+    <div><label style="font-size:10px;color:var(--text2);">CANTIDAD</label><input type="number" id="mc-cant-${r.id_registro}" placeholder="0" style="margin-top:4px;"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+    <div><label style="font-size:10px;color:var(--text2);">PRECIO UNIT.</label><input type="number" id="mc-precio-${r.id_registro}" placeholder="0.00" step="0.01" style="margin-top:4px;"></div>
+    <div><label style="font-size:10px;color:var(--text2);">FAMILIA</label><input type="text" id="mc-familia-${r.id_registro}" placeholder="Familia" style="margin-top:4px;"></div>
+    <div><label style="font-size:10px;color:var(--text2);">ALMACÉN</label><input type="text" id="mc-almacen-${r.id_registro}" placeholder="Almacén" style="margin-top:4px;"></div>
+    <div style="display:flex;align-items:flex-end;gap:6px;">
+      <button class="btn btn-primary btn-sm" onclick="guardarMaterial(${r.id_registro},'${r.id_compra}')">Guardar</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mat-form-${r.id_registro}').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
         </td>
       </tr>`;
     }).join("");
   } catch(e){tbody.innerHTML=`<tr><td colspan="11" class="empty">❌ Error</td></tr>`;}
 }
-
+async function guardarMaterial(id_registro, id_compra) {
+  const body = {
+    id_compra:    id_compra,
+    cod_material: document.getElementById("mc-cod-"+id_registro).value.trim(),
+    desc_material:document.getElementById("mc-desc-"+id_registro).value.trim(),
+    cantidad:     document.getElementById("mc-cant-"+id_registro).value||null,
+    precio:       parseFloat(document.getElementById("mc-precio-"+id_registro).value)||null,
+    familia:      document.getElementById("mc-familia-"+id_registro).value.trim(),
+    Almacen:      document.getElementById("mc-almacen-"+id_registro).value.trim(),
+  };
+  if(!body.cod_material||!body.desc_material){alert("⚠️ Completa Código y Descripción");return;}
+  try {
+    await fetch("/api/materiales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    document.getElementById("mat-form-"+id_registro).style.display="none";
+    toggleMateriales(id_registro, id_compra);
+    toggleMateriales(id_registro, id_compra);
+    alert("✅ Material guardado");
+  } catch(e){alert("❌ Error al guardar material");}
+}
 async function toggleMateriales(id_registro, id_compra) {
   const row = document.getElementById("mat-row-"+id_registro);
   const cont = document.getElementById("mat-"+id_registro);
@@ -430,7 +466,7 @@ async function toggleMateriales(id_registro, id_compra) {
   try {
     const data = await (await fetch(`/api/materiales/${id_compra}`)).json();
     if(!data.length){
-      cont.innerHTML=`<div style="font-size:12px;color:#9ca3af;padding:8px;">Sin materiales registrados para este ID</div>`;
+      cont.innerHTML=`<div style="font-size:12px;color:#9ca3af;padding:8px;"><button class="btn-mat" style="margin-bottom:8px;" onclick="document.getElementById('mat-form-${id_registro}').style.display='block'">+ Agregar material</button>Sin materiales registrados para este ID</div>`;
       return;
     }
     cont.innerHTML = `
