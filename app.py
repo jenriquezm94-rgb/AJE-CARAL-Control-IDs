@@ -96,6 +96,9 @@ def get_dashboard():
         "confirmadas": confirmadas,
         "alertas":     alertas
     })
-
+@app.route("/api/materiales/<id_compra>", methods=["GET"])
+def get_materiales(id_compra):
+    res = supabase.table("material").select("*").eq("id_compra", id_compra).execute()
+    return jsonify(res.data or [])
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
