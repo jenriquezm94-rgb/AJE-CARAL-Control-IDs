@@ -107,5 +107,20 @@ def crear_material():
 def get_materiales(id_compra):
     res = supabase.table("material").select("*").eq("id_compra", id_compra).execute()
     return jsonify(res.data or [])
+   @app.route("/api/kardex/buscar", methods=["GET"])
+def buscar_kardex():
+    cod = request.args.get("cod", "")
+    if not cod:
+        return jsonify([])
+    res = supabase.table("kardex").select("*").ilike("Codigo", f"%{cod}%").limit(8).execute()
+    return jsonify(res.data or [])
+
+@app.route("/api/gerencia/buscar", methods=["GET"])
+def buscar_gerencia():
+    ceco = request.args.get("ceco", "")
+    if not ceco:
+        return jsonify([])
+    res = supabase.table("gerencia").select("*").ilike("Ceco", f"%{ceco}%").limit(8).execute()
+    return jsonify(res.data or []) 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
