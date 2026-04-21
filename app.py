@@ -121,11 +121,11 @@ def buscar_kardex():
     if not cod:
         return jsonify([])
     try:
-        res = supabase.table("Kardex").select("*").eq("Código", int(cod)).limit(8).execute()
+        res = supabase.table("Kardex").select("*").eq("Codigo", int(cod)).limit(8).execute()
         return jsonify(res.data or [])
     except:
         try:
-            res = supabase.table("Kardex").select("*").ilike("Descripción", f"%{cod}%").limit(8).execute()
+            res = supabase.table("Kardex").select("*").ilike("Descripcion", f"%{cod}%").limit(8).execute()
             return jsonify(res.data or [])
         except:
             return jsonify([])
