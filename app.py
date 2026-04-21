@@ -120,7 +120,7 @@ def buscar_kardex():
     cod = request.args.get("cod", "")
     if not cod:
         return jsonify([])
-   res = supabase.table("Kardex").select("*").ilike("Codigo", f"%{cod}%").limit(8).execute()
+    res = supabase.table("Kardex").select("*").ilike("Codigo", f"%{cod}%").limit(8).execute()
     return jsonify(res.data or [])
 
 @app.route("/api/gerencia/buscar", methods=["GET"])
