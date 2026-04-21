@@ -117,11 +117,17 @@ def get_materiales(id_compra):
 
 @app.route("/api/kardex/buscar", methods=["GET"])
 def buscar_kardex():
-    cod = request.args.get("cod", "")
+    cod = request.args.get("cod", "").strip()
     if not cod:
         return jsonify([])
-    res = supabase.table("Kardex").select("*").ilike("Codigo", f"%{cod}%").limit(8).execute()
-    return jsonify(res.data or [])
+    try:
+        if cod.isdigit():
+            res = supabase.table("Kardex").select("*").eq("Código", int(cod)).limit(8).execute()
+        else:
+            res = supabase.table("Kardex").select("*").ilike("Descripción", f"%{cod}%").limit(8).execute()
+        return jsonify(res.data or [])
+    except Exception as e:
+        return jsonify([])
 
 @app.route("/api/gerencia/buscar", methods=["GET"])
 def buscar_gerencia():
