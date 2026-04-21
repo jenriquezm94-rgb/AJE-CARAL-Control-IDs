@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from supabase import create_client, Client
+from supabase import create_client
 import os
 from datetime import datetime, date
 from dotenv import load_dotenv
@@ -11,16 +11,13 @@ app = Flask(__name__)
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://lfxqqubodfmtxxgvxtkt.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxmeHFxdWJvZGZtdHh4Z3Z4dGt0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjY5ODU2NSwiZXhwIjoyMDkyMjc0NTY1fQ.Pf4rN9aHRvcB81J1-EcB6C_P1pxKFu_ySNAl2l0Lt-0")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def calcular_dias(fecha_emision):
-    if not fecha_emision:
+def calcular_dias(fecha):
+    if not fecha:
         return 0
     try:
-        if isinstance(fecha_emision, str):
-            fe = datetime.strptime(fecha_emision[:10], "%Y-%m-%d").date()
-        else:
-            fe = fecha_emision
+        fe = datetime.strptime(str(fecha)[:10], "%Y-%m-%d").date()
         return (date.today() - fe).days
     except:
         return 0
@@ -29,31 +26,110 @@ def calcular_dias(fecha_emision):
 def index():
     return render_template("index.html")
 
-# ── REGISTROS ──────────────────────────────────────────────────────────────────
-
 @app.route("/api/registros", methods=["GET"])
 def get_registros():
     compania = request.args.get("compania", "")
     estado   = request.args.get("estado", "")
     buscar   = request.args.get("buscar", "")
-
     query = supabase.table("registro").select("*").order("fecha_emision", desc=True)
-    if compania:
-        query = query.eq("compania", compania)
     if estado:
         query = query.eq("estado_oc", estado)
-
-    res   = query.execute()
-    datos = res.data or []
-
+    datos = query.execute().data or []
     for r in datos:
         if r.get("estado_oc") not in ("OC CONFIRMADA", "OC RECIBIDA"):
             r["dias_sin_oc"] = calcular_dias(r.get("fecha_emision"))
-
+    if compania:
+        c = compania.lower()
+        datos = [r for r in datos if c in str(r.get("tipo_compra","")).lower()]
     if buscar:
         b = buscar.lower()
         datos = [r for r in datos if
-                 b in str(r.get("numero_id","")).lower() or
-                 b in str(r.get("descripcion","")).lower() or
-                 b in str(r.get("codigo_item","")).lower() or
-                 b in str(
+                 b in str(r.get("id_compra","")).lower() or
+                 b in str(r.get("desc_id","")).lower() or
+                 b in str(r.get("desc_proveedor","")).lower() or
+                 b in str(r.get("tipo_compra","")).lower()]
+    return jsonify(datos)
+
+@app.route("/api/registros", methods=["POST"])
+def crear_registro():
+    body = request.json
+    body["fecha_emision"] = body.get("fecha_emision") or date.today().isoformat()
+    body["estado_oc"]     = body.get("estado_oc") or "SIN OC"
+    body["dias_sin_oc"]   = 0
+    body["created_at"]    = datetime.now().isoformat()
+    res = supabase.table("registro").insert(body).execute()
+    return jsonify(res.data[0] if res.data else {}), 201
+
+@app.route("/api/registros/<int:id>", methods=["PUT"])
+def actualizar_registro(id):
+    body = request.json
+    if body.get("estado_oc") in ("OC CONFIRMADA", "OC RECIBIDA"):
+        body["dias_sin_oc"] = 0
+    res = supabase.table("registro").update(body).eq("id_registro", id).execute()
+    return jsonify(res.data[0] if res.data else {})
+
+@app.route("/api/registros/<int:id>", methods=["DELETE"])
+def eliminar_registro(id):
+    supabase.table("registro").delete().eq("id_registro", id).execute()
+    return jsonify({"ok": True})
+
+@app.route("/api/dashboard", methods=["GET"])
+def get_dashboard():
+    datos = supabase.table("registro").select("*").execute().data or []
+    hoy = date.today()
+    mes_actual = hoy.strftime("%Y-%m")
+    total_mes  = sum(1 for r in datos if str(r.get("fecha_emision",""))[:7] == mes_actual)
+    pendientes = [r for r in datos if r.get("estado_oc") in ("SIN OC", "PENDIENTE", None)]
+    for r in pendientes:
+        r["dias_sin_oc"] = calcular_dias(r.get("fecha_emision"))
+    vencidos    = sum(1 for r in pendientes if r["dias_sin_oc"] > 4)
+    en_limite   = sum(1 for r in pendientes if r["dias_sin_oc"] == 4)
+    en_proceso  = sum(1 for r in datos if r.get("estado_oc") == "OC EN PROCESO")
+    confirmadas = sum(1 for r in datos if r.get("estado_oc") in ("OC CONFIRMADA", "OC RECIBIDA"))
+    alertas     = sorted([r for r in pendientes if r["dias_sin_oc"] >= 4], key=lambda x: x["dias_sin_oc"], reverse=True)
+    total_caral = sum(1 for r in datos if "caral" in str(r.get("tipo_compra","")).lower())
+    total_aje   = sum(1 for r in datos if "aje" in str(r.get("tipo_compra","")).lower())
+    sin_oc      = sum(1 for r in datos if r.get("estado_oc") in ("SIN OC", None))
+    return jsonify({
+        "total_mes":   total_mes,
+        "total":       len(datos),
+        "vencidos":    vencidos,
+        "en_limite":   en_limite,
+        "en_proceso":  en_proceso,
+        "confirmadas": confirmadas,
+        "alertas":     alertas,
+        "total_caral": total_caral,
+        "total_aje":   total_aje,
+        "sin_oc":      sin_oc
+    })
+
+@app.route("/api/materiales", methods=["POST"])
+def crear_material():
+    body = request.json
+    body["created_at"] = datetime.now().isoformat()
+    res = supabase.table("material").insert(body).execute()
+    return jsonify(res.data[0] if res.data else {}), 201
+
+@app.route("/api/materiales/<id_compra>", methods=["GET"])
+def get_materiales(id_compra):
+    res = supabase.table("material").select("*").eq("id_compra", id_compra).execute()
+    return jsonify(res.data or [])
+
+@app.route("/api/kardex/buscar", methods=["GET"])
+def buscar_kardex():
+    cod = request.args.get("cod", "")
+    if not cod:
+        return jsonify([])
+    res = supabase.table("kardex").select("*").ilike("Codigo", f"%{cod}%").limit(8).execute()
+    return jsonify(res.data or [])
+
+@app.route("/api/gerencia/buscar", methods=["GET"])
+def buscar_gerencia():
+    ceco = request.args.get("ceco", "")
+    if not ceco:
+        return jsonify([])
+    res = supabase.table("gerencia").select("*").ilike("Ceco", f"%{ceco}%").limit(8).execute()
+    return jsonify(res.data or [])
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
