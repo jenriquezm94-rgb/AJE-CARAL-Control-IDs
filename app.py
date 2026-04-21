@@ -121,13 +121,14 @@ def buscar_kardex():
     if not cod:
         return jsonify([])
     try:
-        if cod.isdigit():
-            res = supabase.table("Kardex").select("*").eq("Código", int(cod)).limit(8).execute()
-        else:
-            res = supabase.table("Kardex").select("*").ilike("Descripción", f"%{cod}%").limit(8).execute()
+        res = supabase.table("Kardex").select("*").eq("Código", int(cod)).limit(8).execute()
         return jsonify(res.data or [])
-    except Exception as e:
-        return jsonify([])
+    except:
+        try:
+            res = supabase.table("Kardex").select("*").ilike("Descripción", f"%{cod}%").limit(8).execute()
+            return jsonify(res.data or [])
+        except:
+            return jsonify([])
 
 @app.route("/api/gerencia/buscar", methods=["GET"])
 def buscar_gerencia():
