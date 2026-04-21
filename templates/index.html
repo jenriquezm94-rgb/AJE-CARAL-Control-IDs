@@ -454,8 +454,8 @@ async function buscarKardex(val, id_registro) {
     if(!data.length){lista.style.display="none";return;}
     lista.style.display="block";
     lista.innerHTML = data.map(m=>`
-      <div class="autocomplete-item" onclick="seleccionarKardex('${m.Codigo}',${JSON.stringify(m.Descripcion||"")},${id_registro})">
-        <span style="font-weight:600;color:var(--caral);">${m.Codigo}</span>
+      <div class="autocomplete-item" onclick="seleccionarKardex('${m.Código}',${JSON.stringify(m.Descripcion||"")},${id_registro})">
+        <span style="font-weight:600;color:var(--caral);">${m.Código}</span>
         <span style="color:var(--text2);margin-left:8px;">${m.Descripcion||""}</span>
         <span style="color:var(--text3);margin-left:8px;font-size:10px;">${m.UniMedida||""}</span>
       </div>`).join("");
